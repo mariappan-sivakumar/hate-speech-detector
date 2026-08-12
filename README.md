@@ -1,117 +1,101 @@
-# YouTube Hate Speech Detector Prototype
+# YouTube Hate Speech Detector
 
-A prototype application that takes raw comment strings, classifies them as "Hate Speech" or "No Hate Speech" using Google Gemini 1.5 Pro, and displays categorized results dynamically inside a Streamlit web interface.
+An AI-powered application that classifies YouTube comments as **Hate Speech** or **No Hate Speech**, helping creators, social media managers, and community moderators cut through manual comment review at scale.
 
-## Project Structure
+## Problem
 
-```text
-hate-speech-detector/
-├── backend/
-│   ├── config.py            # Configuration and Env verification
-│   ├── models.py            # Pydantic v2 schemas
-│   ├── gemini_service.py    # Batching and Gemini API service logic
-│   └── main.py              # FastAPI application configuration
-├── frontend/
-│   └── app.py               # Streamlit interactive UI layout
-├── .env.example             # Template for API Key configuration
-├── requirements.txt         # Python project dependencies
-└── README.md                # Documentation instructions
+Manually moderating hundreds or thousands of YouTube comments is time-consuming and emotionally draining. YouTube's native spam filters don't offer granular hate speech detection, leaving creators without visibility into toxic engagement patterns — resulting in delayed moderation, unmoderated harmful content, and reputational risk.
+
+## Solution
+
+This project accepts raw comments via a REST API and classifies each one using **Google Gemini**, giving creators fast, data-driven moderation insight without needing to read every comment themselves.
+
+## Repository Structure
+
+This repo contains two parallel backend implementations plus a shared Streamlit UI:
+
+```
+hate_speech_detector/
+├── backend/            # Python backend
+├── frontend/            # Streamlit UI — comment input & classification results
+└── java_backend/
+    └── hate-speech-detector/
+        ├── src/main/java/com/mari/hatespeechdetector/
+        │   ├── config/       # Gemini API & CORS configuration
+        │   ├── controller/   # REST endpoints
+        │   ├── dto/          # Request/response DTOs (Lombok)
+        │   └── service/      # Gemini integration & classification logic
+        ├── src/test/java/com/mari/hatespeechdetector/
+        └── pom.xml
 ```
 
-## Setup Instructions
+- **`backend/`** — Python implementation of the classification service
+- **`java_backend/hate-speech-detector/`** — Spring Boot 3 implementation of the same service (`com.mari.hatespeechdetector`)
+- **`frontend/`** — Streamlit app that sends comments to whichever backend is active and displays classification results
 
-### 1. Configure the Environment
-Create a `.env` file in the root directory by copying the example template:
+> Note: The two backends are alternate implementations of the same API, not dependent on each other. Point the Streamlit frontend at whichever one you're running.
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Java Backend | Spring Boot 3, Java, Maven |
+| Python Backend | Python |
+| Frontend | Streamlit |
+| AI Engine | Google Gemini (`gemini-3.1-pro-preview`) |
+| HTTP Client (Java) | OkHttp3 (v4.12.0) |
+| API Docs (Java) | SpringDoc OpenAPI 2.5 (Swagger UI) |
+| DTOs (Java) | Lombok |
+| IDE | Google Antigravity 2.0 |
+
+## Key Design Decisions
+
+- Comments are submitted directly via API request body (no YouTube Data API dependency)
+- Batched Gemini calls — 10 comments per request — for efficiency
+- Exponential backoff (1s → 2s → 4s) for rate-limit resilience
+- Constructor injection over field injection (Java service)
+- Gemini model name externalized as a config constant, not hardcoded
+
+## Target Users
+
+- **YouTube Content Creators** — monitor and manage toxic comments without hours of manual review
+- **Social Media Managers** — maintain a healthy comment community for brands and organizations
+- **Community Moderators** — prioritize and action flagged comments efficiently on large channels
+
+## Sample Classification
+
+| Comment | Classification |
+|---|---|
+| "People like you should not be allowed to speak publicly. Go back to where you came from." | Hate Speech |
+| "I will find you and make you regret posting this." | Hate Speech |
+| "This is overwhelming" | No Hate Speech |
+| "Good video but too lengthy" | No Hate Speech |
+
+## Getting Started
+
+### Java Backend
 ```bash
-cp .env.example .env
+cd java_backend/hate-speech-detector
+mvn spring-boot:run
 ```
-Open `.env` and fill in your Gemini API Key:
-```text
-GEMINI_API_KEY=AIzaSy...your_gemini_api_key_here
-```
+Swagger UI: `http://localhost:8080/swagger-ui.html` (adjust port if configured differently)
 
-### 2. Install Dependencies
-Ensure you have Python 3.9+ installed. Set up a virtual environment and install the required modules:
+### Python Backend
 ```bash
-python -m venv venv
-# On Windows (PowerShell):
-.\venv\Scripts\Activate.ps1
-# On Windows (CMD):
-.\venv\Scripts\activate.bat
-# On macOS/Linux:
-source venv/bin/activate
-
+cd backend
 pip install -r requirements.txt
+python app.py
 ```
 
-### 3. Run the FastAPI Backend
-Start the backend server on `http://localhost:8000`:
+### Streamlit Frontend
 ```bash
-uvicorn backend.main:app --reload
+cd frontend
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
-### 4. Run the Streamlit Frontend
-In a new terminal window (with the virtual environment activated), start the frontend server:
-```bash
-streamlit run frontend/app.py
-```
-This automatically opens the app in your browser at `http://localhost:8501`.
+> Update the requirements/run commands above to match your actual entry point and dependency files.
 
----
+## Status
 
-## API Usage & Verification
-
-### GET /health
-Check backend server readiness:
-```bash
-curl -X GET http://localhost:8000/health
-```
-Response:
-```json
-{
-  "status": "ok"
-}
-```
-
-### POST /classify
-Submit batch comments for classification:
-```bash
-curl -X POST http://localhost:8000/classify \
-  -H "Content-Type: application/json" \
-  -d '{"comments": ["This is overwhelming.", "Disgusting. Your kind is ruining everything."]}'
-```
-
-### Example Input & Output JSON
-**Request:**
-```json
-{
-  "comments": [
-    "I love the visuals of this video!",
-    "I will find you and make you regret posting this."
-  ]
-}
-```
-
-**Response:**
-```json
-{
-  "total": 2,
-  "hate_speech_count": 1,
-  "results": [
-    {
-      "comment": "I love the visuals of this video!",
-      "label": "No Hate Speech",
-      "confidence": "High",
-      "reason": "General positive criticism and praise for video visual aesthetics.",
-      "type": "None"
-    },
-    {
-      "comment": "I will find you and make you regret posting this.",
-      "label": "Hate Speech",
-      "confidence": "High",
-      "reason": "Direct violent threat targeting the publisher.",
-      "type": "Threat"
-    }
-  ]
-}
-```
+🚧 Prototype in active development.
