@@ -46,7 +46,6 @@ hate_speech_detector/
 | HTTP Client (Java) | OkHttp3 (v4.12.0) |
 | API Docs (Java) | SpringDoc OpenAPI 2.5 (Swagger UI) |
 | DTOs (Java) | Lombok |
-| IDE | Google Antigravity 2.0 |
 
 ## Key Design Decisions
 
