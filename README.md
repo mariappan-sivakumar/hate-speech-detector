@@ -42,7 +42,7 @@ hate_speech_detector/
 | Java Backend | Spring Boot 3, Java, Maven |
 | Python Backend | Python |
 | Frontend | Streamlit |
-| AI Engine | Google Gemini (`gemini-3.1-pro-preview`) |
+| AI Engine | Google Gemini (`gemini-3.1-flash-lite`) |
 | HTTP Client (Java) | OkHttp3 (v4.12.0) |
 | API Docs (Java) | SpringDoc OpenAPI 2.5 (Swagger UI) |
 | DTOs (Java) | Lombok |
